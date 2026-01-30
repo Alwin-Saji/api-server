@@ -10,11 +10,22 @@ import cors from 'cors';
 
 const app = express();
 
-// CORS (single source of truth)
+const allowedOriginRegex = /\.vercel\.app$/;
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: function (origin, callback) {
+    // Allow server-to-server & health checks
+    if (!origin) return callback(null, true);
+
+    if (allowedOriginRegex.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
+
 
 // Core middleware
 app.use(express.json());
