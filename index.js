@@ -10,48 +10,40 @@ import cors from 'cors';
 
 const app = express();
 
+// 🔥 REQUIRED FOR RENDER + CLERK
+app.set("trust proxy", 1);
+
+// CORS
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server & tools
     if (!origin) return callback(null, true);
-
-    // Allow localhost
-    if (origin.startsWith("http://localhost")) {
-      return callback(null, true);
-    }
-
-    // Allow ALL vercel deployments safely
-    if (origin.includes("vercel.app")) {
-      return callback(null, true);
-    }
-
-    // Explicit block
+    if (origin.startsWith("http://localhost")) return callback(null, true);
+    if (origin.includes("vercel.app")) return callback(null, true);
     return callback(new Error("CORS blocked"));
   },
   credentials: true,
 }));
 
-
-// Core middleware
 app.use(express.json());
-app.use(clerkMiddleware());
 
-// Routes
+// Public routes
 app.use('/webhooks', webhookrouter);
 app.use('/users', userrouter);
+
+// Clerk AFTER public routes
+app.use(clerkMiddleware());
+
+// Protected routes
 app.use('/posts', postrouter);
 app.use('/comments', commentrouter);
 
-// Error handler (last)
+// Error handler
 app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
     message: err.message || "Something went wrong",
-    status: err.status,
-    stack: err.stack
   });
 });
 
-// Start server (only once)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   connectDB();
