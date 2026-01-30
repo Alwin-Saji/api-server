@@ -14,17 +14,22 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow non-browser requests (Render health checks, Clerk webhooks)
     if (!origin) {
-      return callback(null, false); // ⬅️ IMPORTANT
+      return callback(null, true);
+    }
+
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
     }
 
     if (origin.endsWith('.vercel.app')) {
-      return callback(null, origin); // ⬅️ return ORIGIN, not true
+      return callback(null, origin);
     }
 
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
