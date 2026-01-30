@@ -10,22 +10,23 @@ import cors from 'cors';
 
 const app = express();
 
-const allowedOriginRegex = /\.vercel\.app$/;
-
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow server-to-server & health checks
-    if (!origin) return callback(null, true);
-
-    if (allowedOriginRegex.test(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
+    // Allow non-browser requests (Render health checks, Clerk webhooks)
+    if (!origin) {
+      return callback(null, false); // ⬅️ IMPORTANT
     }
-  },
-  credentials: true
-}));
 
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, origin); // ⬅️ return ORIGIN, not true
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Core middleware
 app.use(express.json());
