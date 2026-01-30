@@ -11,27 +11,26 @@ import cors from 'cors';
 const app = express();
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow non-browser requests (Render health checks, Clerk webhooks)
-    if (!origin) {
+  origin: (origin, callback) => {
+    // Allow server-to-server & tools
+    if (!origin) return callback(null, true);
+
+    // Allow localhost
+    if (origin.startsWith("http://localhost")) {
       return callback(null, true);
     }
 
-    // Allow localhost for development
-    if (origin.startsWith('http://localhost:')) {
+    // Allow ALL vercel deployments safely
+    if (origin.includes("vercel.app")) {
       return callback(null, true);
     }
 
-    if (origin.endsWith('.vercel.app')) {
-      return callback(null, origin);
-    }
-
-    return callback(new Error("Not allowed by CORS"));
+    // Explicit block
+    return callback(new Error("CORS blocked"));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 // Core middleware
 app.use(express.json());
