@@ -2,6 +2,7 @@ import { parse } from "dotenv";
 import postModel from "../models/post.model.js";
 import User from "../models/user.model.js";
 import ImageKit from "imagekit";
+import { clerkClient } from "@clerk/express";
 
 export const getPosts = async (req, res) => {
   try {
@@ -92,10 +93,20 @@ export const createPost = async (req, res) => {
         return res.status(404).json("Not Authenticated");
     }
 
-    const user= await User.findOne({clerkUserId});
+    let user= await User.findOne({clerkUserId});
 
     if(!user){
-        return res.status(404).json("User not found(from create post)");
+        const clerkUser = await clerkClient.users.getUser(clerkUserId);
+        const newUser = new User({
+          clerkUserId: clerkUser.id,
+          username:
+            clerkUser.username ||
+            clerkUser.emailAddresses[0].emailAddress.split("@")[0],
+          email: clerkUser.emailAddresses[0].emailAddress,
+          img: clerkUser.imageUrl,
+        });
+
+        user = await newUser.save();
     }
 
     if (!req.body.title) {

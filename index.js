@@ -24,10 +24,12 @@ app.use(cors({
   credentials: true,
 }));
 
+// Webhook route MUST be before express.json() to preserve raw body for signature verification
+app.use('/webhooks', webhookrouter);
+
 app.use(express.json());
 
 // Public routes
-app.use('/webhooks', webhookrouter);
 app.use('/users', userrouter);
 
 // Clerk AFTER public routes

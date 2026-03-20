@@ -1,5 +1,6 @@
 import Comment from "../models/comment.model.js";
 import User from "../models/user.model.js";
+import { clerkClient } from "@clerk/express";
 
 export const getPostcomments = async (req,res)=>{
     const comments = await Comment.find({post:req.params.postId})
@@ -20,11 +21,21 @@ export const addcomments = async (req,res, next)=>{
         }
 
 
-        const user = await User.findOne({clerkUserId});
+    let user = await User.findOne({ clerkUserId });
 
-        if (!user) {
-            return res.status(404).json("User not found"); 
-        }
+    if (!user) {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const newUser = new User({
+        clerkUserId: clerkUser.id,
+        username:
+          clerkUser.username ||
+          clerkUser.emailAddresses[0].emailAddress.split("@")[0],
+        email: clerkUser.emailAddresses[0].emailAddress,
+        img: clerkUser.imageUrl,
+      });
+
+      user = await newUser.save();
+    }
 
         const newComment = new Comment({ 
             ...req.body,
