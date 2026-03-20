@@ -202,6 +202,12 @@ export const createPost = async (req, res) => {
   });
 
   export const uploadAuth= async (req,res)=>{
+    const clerkUserId = req.auth.userId;
+    
+    if(!clerkUserId){
+        return res.status(401).json("Not authenticated");
+    }
+    
     const result=imagekit.getAuthenticationParameters();
     res.send(result);
   }

@@ -13,10 +13,10 @@ import { requireAuth } from "@clerk/express";
 const router = express.Router();
 
 // 🔐 Protected (specific first)
-router.get("/upload-auth", requireAuth(), uploadAuth);
-router.post("/", requireAuth(), createPost);
-router.delete("/:id", requireAuth(), deletePost);
-router.patch("/feature", requireAuth(), featurePost);
+router.get("/upload-auth", uploadAuth);
+router.post("/", createPost);
+router.delete("/:id", deletePost);
+router.patch("/feature", featurePost);
 
 // 🌍 Public
 router.get("/", getPosts);
