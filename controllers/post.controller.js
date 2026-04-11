@@ -207,7 +207,12 @@ export const createPost = async (req, res) => {
     if(!clerkUserId){
         return res.status(401).json("Not authenticated");
     }
-    
-    const result=imagekit.getAuthenticationParameters();
-    res.send(result);
+
+    try {
+      const result = imagekit.getAuthenticationParameters();
+      res.send(result);
+    } catch (error) {
+      console.error("ImageKit Auth Error:", error);
+      res.status(500).json({ message: "ImageKit authentication failed", error: error.message });
+    }
   }
