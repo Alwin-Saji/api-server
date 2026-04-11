@@ -87,47 +87,56 @@ export const getPost = async (req, res) => {
   res.status(200).json(post);
 };
 export const createPost = async (req, res) => {
-    const clerkUserId= req.auth.userId;
-    
-    if(!clerkUserId){
-        return res.status(404).json("Not Authenticated");
+  try {
+    const clerkUserId = req.auth.userId;
+
+    if (!clerkUserId) {
+      return res.status(401).json({ message: "Not Authenticated" });
     }
 
-    let user= await User.findOne({clerkUserId});
+    let user = await User.findOne({ clerkUserId });
 
-    if(!user){
-        const clerkUser = await clerkClient.users.getUser(clerkUserId);
-        const newUser = new User({
-          clerkUserId: clerkUser.id,
-          username:
-            clerkUser.username ||
-            clerkUser.emailAddresses[0].emailAddress.split("@")[0],
-          email: clerkUser.emailAddresses[0].emailAddress,
-          img: clerkUser.imageUrl,
-        });
+    if (!user) {
+      console.log("Creating new user in database...");
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const newUser = new User({
+        clerkUserId: clerkUser.id,
+        username:
+          clerkUser.username ||
+          clerkUser.emailAddresses[0].emailAddress.split("@")[0],
+        email: clerkUser.emailAddresses[0].emailAddress,
+        img: clerkUser.imageUrl,
+      });
 
-        user = await newUser.save();
+      user = await newUser.save();
     }
 
     if (!req.body.title) {
-        return res.status(400).json("Title is required");
+      return res.status(400).json({ message: "Title is required" });
     }
 
-    let slug = req.body.title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    let slug = req.body.title
+      .toLowerCase()
+      .replace(/ /g, "-")
+      .replace(/[^\w-]+/g, "");
     let existingPost = await postModel.findOne({ slug });
-    
-    let counter=2;
 
-    while(existingPost){
-        slug = `${slug}-${counter}`;
-        existingPost = await postModel.findOne({ slug });
-        counter++;
+    let counter = 2;
+
+    while (existingPost) {
+      slug = `${slug}-${counter}`;
+      existingPost = await postModel.findOne({ slug });
+      counter++;
     }
 
-    const newPost = new postModel({user:user._id,slug,...req.body});
+    const newPost = new postModel({ user: user._id, slug, ...req.body });
 
-    const post= await newPost.save();
+    const post = await newPost.save();
     res.status(200).json(post);
+  } catch (err) {
+    console.error("Error creating post:", err);
+    res.status(500).json({ message: "Failed to create post", error: err.message, stack: err.stack });
+  }
 };
 
 

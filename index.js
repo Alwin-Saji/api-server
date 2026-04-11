@@ -16,12 +16,21 @@ app.set("trust proxy", 1);
 // CORS
 app.use(cors({
   origin: (origin, callback) => {
+    console.log("Incoming Origin:", origin);
     if (!origin) return callback(null, true);
-    if (origin.startsWith("http://localhost")) return callback(null, true);
-    if (origin.includes("vercel.app")) return callback(null, true);
-    return callback(new Error("CORS blocked"));
+    // Allow localhost, vercel.app, and any custom domains
+    if (
+      origin.startsWith("http://localhost") || 
+      origin.includes("vercel.app") ||
+      origin.includes("blog-pi-seven-82.vercel.app") // Your specific Vercel URL
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // Webhook route MUST be before express.json() to preserve raw body for signature verification
