@@ -89,32 +89,40 @@ export const getPost = async (req, res) => {
 export const createPost = async (req, res) => {
   try {
     const clerkUserId = req.auth.userId;
+    console.log("DEBUG: clerkUserId from clerkMiddleware:", clerkUserId);
 
     if (!clerkUserId) {
-      return res.status(401).json({ message: "Not Authenticated" });
+      return res.status(401).json({ message: "Not Authenticated (No clerkUserId)" });
     }
 
     let user = await User.findOne({ clerkUserId });
 
     if (!user) {
-      console.log("Creating new user in database...");
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
-      const newUser = new User({
-        clerkUserId: clerkUser.id,
-        username:
-          clerkUser.username ||
-          clerkUser.emailAddresses[0].emailAddress.split("@")[0],
-        email: clerkUser.emailAddresses[0].emailAddress,
-        img: clerkUser.imageUrl,
-      });
+      console.log("DEBUG: User not found in MongoDB. Attempting to fetch from Clerk...");
+      try {
+        const clerkUser = await clerkClient.users.getUser(clerkUserId);
+        const newUser = new User({
+          clerkUserId: clerkUser.id,
+          username:
+            clerkUser.username ||
+            clerkUser.emailAddresses[0].emailAddress.split("@")[0],
+          email: clerkUser.emailAddresses[0].emailAddress,
+          img: clerkUser.imageUrl,
+        });
 
-      user = await newUser.save();
+        user = await newUser.save();
+        console.log("DEBUG: New user created in database.");
+      } catch (clerkErr) {
+        console.error("DEBUG: Clerk Client Error:", clerkErr.message);
+        return res.status(500).json({ message: "Failed to fetch user from Clerk", error: clerkErr.message });
+      }
     }
 
     if (!req.body.title) {
       return res.status(400).json({ message: "Title is required" });
     }
 
+    console.log("DEBUG: Creating post for slug:", req.body.title);
     let slug = req.body.title
       .toLowerCase()
       .replace(/ /g, "-")
@@ -132,10 +140,15 @@ export const createPost = async (req, res) => {
     const newPost = new postModel({ user: user._id, slug, ...req.body });
 
     const post = await newPost.save();
+    console.log("DEBUG: Post created successfully:", slug);
     res.status(200).json(post);
   } catch (err) {
-    console.error("Error creating post:", err);
-    res.status(500).json({ message: "Failed to create post", error: err.message, stack: err.stack });
+    console.error("CRITICAL: Error creating post:", err.message);
+    res.status(500).json({ 
+        message: "Failed to create post (Critical)", 
+        error: err.message, 
+        stack: process.env.NODE_ENV === "production" ? null : err.stack 
+    });
   }
 };
 
