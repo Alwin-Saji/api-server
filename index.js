@@ -14,23 +14,22 @@ const app = express();
 app.set("trust proxy", 1);
 
 // CORS
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://blog-pi-seven-82.vercel.app", // Replace with your actual production frontend URL
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    console.log("Incoming Origin:", origin);
-    if (!origin) return callback(null, true);
-    // Allow localhost, vercel.app, and any custom domains
-    if (
-      origin.startsWith("http://localhost") || 
-      origin.includes("vercel.app") ||
-      origin.includes("blog-pi-seven-82.vercel.app") // Your specific Vercel URL
-    ) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
     }
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "Clerk-Handshake"]
 }));
 
 // Webhook route MUST be before express.json() to preserve raw body for signature verification
@@ -38,11 +37,11 @@ app.use('/webhooks', webhookrouter);
 
 app.use(express.json());
 
+// Clerk middleware (MUST be before routes that use req.auth)
+app.use(clerkMiddleware());
+
 // Public routes
 app.use('/users', userrouter);
-
-// Clerk AFTER public routes
-app.use(clerkMiddleware());
 
 // Protected routes
 app.use('/posts', postrouter);
